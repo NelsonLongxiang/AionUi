@@ -18,15 +18,32 @@ import { createRateLimiter } from '../middleware/security';
  * Register static assets and page routes
  */
 const resolveRendererPath = () => {
-  // Webpack assets are always inside app.asar in production or project directory in development
-  // app.getAppPath() returns the correct path for both cases
+  // In production (packaged app), app.getAppPath() returns the asar path
+  // In development, it returns out/main, but renderer is at out/renderer
+  // 生产环境（打包后），app.getAppPath() 返回 asar 路径
+  // 开发环境，它返回 out/main，但渲染器在 out/renderer
   const appPath = app.getAppPath();
+  const isPackaged = app.isPackaged;
 
   const candidates = [
+    // Production: renderer is inside asar at out/renderer
+    // 生产环境：渲染器在 asar 内的 out/renderer
     {
       staticRoot: path.join(appPath, 'out', 'renderer'),
       indexHtml: path.join(appPath, 'out', 'renderer', 'index.html'),
     },
+    // Development fallback: renderer is at project root out/renderer
+    // 开发环境回退：渲染器在项目根目录的 out/renderer
+    ...(isPackaged
+      ? []
+      : [
+          {
+            staticRoot: path.join(appPath, '..', 'renderer'),
+            indexHtml: path.join(appPath, '..', 'renderer', 'index.html'),
+          },
+        ]),
+    // Legacy webpack path (for backwards compatibility)
+    // 旧版 webpack 路径（向后兼容）
     {
       staticRoot: path.join(appPath, '.webpack', 'renderer'),
       indexHtml: path.join(appPath, '.webpack', 'renderer', 'main_window', 'index.html'),
